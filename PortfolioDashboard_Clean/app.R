@@ -69,10 +69,15 @@ ui <- fluidPage(
   ),
   
   # Header
+  # Header - Replace your existing header fluidRow with this updated version
   fluidRow(
     column(12,
            div(class = "content-header",
-               h1("Portfolio Analytics", style = "margin: 0;")
+               style = "display: flex; justify-content: space-between; align-items: center;",
+               h1("Portfolio Analytics", style = "margin: 0; flex-grow: 1;"),
+               img(src = "logo.jpg", 
+                   style = "height: 60px; max-width: 200px; object-fit: contain;",
+                   alt = "Company Logo")
            )
     )
   ),
@@ -103,9 +108,9 @@ ui <- fluidPage(
                      
                      br(),
                      actionButton("calculate_active_share",
-                                  "Calculate Active Share",
+                                  "Calculate",
                                   class = "btn-primary",
-                                  style = "width: 100%;"),
+                                  style = "width: 100%;padding: 8px 12px; white-space: nowrap;"),
                      
                      br(), br(),
                      uiOutput("calculation_status")
@@ -117,11 +122,11 @@ ui <- fluidPage(
                  h3("Active Share Results"),
                  
                  # Test output
-                 div(
-                   style = "margin: 20px 0; padding: 10px; background-color: #f8f9fa;",
-                   h5("Debug Info:"),
-                   verbatimTextOutput("test_output")
-                 ),
+                 # div(
+                 #  style = "margin: 20px 0; padding: 10px; background-color: #f8f9fa;",
+                 # h5("Debug Info:"),
+                 # verbatimTextOutput("test_output")
+                 # ),
                  
                  # Results
                  uiOutput("active_share_summary"),
@@ -133,6 +138,7 @@ ui <- fluidPage(
   )
 )
 
+# Line 141
 # Server
 server <- function(input, output, session) {
   
@@ -245,6 +251,7 @@ server <- function(input, output, session) {
     })
   }
   
+  # Line 254
   # Enhanced getModelData function with date parameter
   getModelDataByDate <- function(selected_date) {
     tryCatch({
@@ -318,6 +325,7 @@ server <- function(input, output, session) {
     }
   })
   
+  # Line 328
   # Load portfolio and model data when date changes
   observeEvent(input$date, {
     cat("=== DATE CHANGED ===", as.character(input$date), "\n")
@@ -441,6 +449,7 @@ server <- function(input, output, session) {
           "| Time:", Sys.time())
   })
   
+  # Line 452
   # Status indicator
   output$calculation_status <- renderUI({
     if (!is.null(values$error_message)) {
@@ -476,6 +485,7 @@ server <- function(input, output, session) {
     }
   })
   
+  # Line 488
   # Data table with professional formatting
   output$active_share_table <- renderDT({
     if (is.null(values$active_share_results)) {
@@ -508,7 +518,7 @@ server <- function(input, output, session) {
           if (sector != "CASH") {
             header_row <- sector_data[1, !names(sector_data) %in% "Sector"]  # Use existing structure
             header_row[1, ] <- NA  # Clear all values
-            header_row$Ticker <- paste("=====", toupper(sector), "=====")
+            header_row$Ticker <- paste0("<b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;", toupper(sector), "</b>")
             header_row$Description <- ""
             for (col in names(header_row)[3:ncol(header_row)]) {
               header_row[[col]] <- ""
@@ -523,7 +533,7 @@ server <- function(input, output, session) {
           # Format numeric columns as percentages
           for (col in names(sector_display)) {
             if (is.numeric(sector_display[[col]])) {
-              sector_display[[col]] <- paste0(round(sector_display[[col]] * 100, 2), "%")
+              sector_display[[col]] <- sprintf("%.2f%%", sector_display[[col]] * 100)
             }
           }
           
@@ -538,15 +548,13 @@ server <- function(input, output, session) {
             subtotal_row <- sector_data[1, !names(sector_data) %in% "Sector"]  # Use existing structure
             subtotal_row[1, ] <- NA  # Clear all values
             subtotal_row$Ticker <- ""
-            subtotal_row$Description <- ">>> Subtotal:"
+            subtotal_row$Description <- "<div style='text-align: right;'><b>Subtotal:</b></div>"
             
-            # Calculate subtotals for numeric columns
+            # Calculate subtotals for ALL numeric columns (including Active Share)
             original_numeric_cols <- sapply(sector_data, is.numeric)
             for (col in names(sector_data)[original_numeric_cols]) {
-              if (col != "Active Share") {  # Skip Active Share column
-                subtotal_value <- sum(sector_data[[col]], na.rm = TRUE)
-                subtotal_row[[col]] <- paste0(round(subtotal_value * 100, 2), "%")
-              }
+              subtotal_value <- sum(sector_data[[col]], na.rm = TRUE)
+              subtotal_row[[col]] <- paste0("<b>", sprintf("%.2f%%", subtotal_value * 100), "</b>")
             }
             
             display_rows[[row_counter]] <- subtotal_row
@@ -583,7 +591,8 @@ server <- function(input, output, session) {
                          info = FALSE,
                          dom = 'ft'
                        ), 
-                       rownames = FALSE))
+                       rownames = FALSE,
+                       escape = FALSE))
     }
   })
   
@@ -591,4 +600,8 @@ server <- function(input, output, session) {
 }
 
 # Run the app
-shinyApp(ui = ui, server = server)
+shinyApp(ui = ui, server = server, 
+         options = list(launch.browser = function(url) {
+           utils::browseURL(url)
+         }, port = getOption("shiny.port"), 
+         width = 1400, height = 800))
